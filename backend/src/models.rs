@@ -1,7 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+
+use crate::errors::Error;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "ticket_status", rename_all = "snake_case")]
 pub enum TicketStatus {
     Open,
@@ -10,6 +14,7 @@ pub enum TicketStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "ticket_priority", rename_all = "snake_case")]
 pub enum TicketPriority {
     Low,
@@ -58,16 +63,8 @@ pub struct TicketStat {
     pub count: i64,
 }
 
-
 impl Ticket {
     pub async fn create(db: &PgPool, payload: CreateTicketRequest) -> Result<Ticket, Error> {
-        use crate::models::TicketPriority;
-        use crate::models::TicketStatus;
-        use chrono::Utc;
-
-        let status = TicketStatus::Open; 
-        let priority = payload.priority;
-
         let ticket = sqlx::query_as::<_, Ticket>(
             r#"
             INSERT INTO tickets (title, description, status, priority)
@@ -77,44 +74,101 @@ impl Ticket {
         )
         .bind(&payload.title)
         .bind(&payload.description)
-        .bind(status)
-        .bind(priority)
+        .bind(TicketStatus::Open)
+        .bind(payload.priority)
         .fetch_one(db)
         .await?;
         Ok(ticket)
     }
 
     pub async fn get(db: &PgPool, id: i32) -> Result<Ticket, Error> {
-        use crate::models::TicketPriority;
-        let ticket = sqlx::query_as::<_, Ticket>(
+        sqlx::query_as::<_, Ticket>(
             r#"
-            SELECT id, title, description, status, priority, created_at FROM tickets WHERE id = $1
+            SELECT id, title, description, status, priority, created_at
+            FROM tickets
+            WHERE id = $1
             "#,
         )
         .bind(id)
-        .fetch_one(db)
-        .await?;
-        Ok(ticket)
+        .fetch_optional(db)
+        .await?
+        .ok_or_else(|| Error::NotFound(format!("Ticket {id} not found")))
     }
 
-    pub async fn update(db: &PgPool, id: i32, payload: UpdateTicketRequest) -> Result<Ticket, Error> {
-        use crate::models::TicketPriority;
-        use crate::models::TicketStatus;
-        use chrono::Utc;
+    pub async fn list(db: &PgPool, params: TicketQueryParams) -> Result<Vec<Ticket>, Error> {
+        let limit = params.limit.unwrap_or(20).clamp(1, 100);
+        let page = params.page.unwrap_or(1).max(1);
+        let offset = (page - 1) * limit;
 
-        let status = payload.status.unwrap_or(TicketStatus::Open);
-        let priority = payload.priority.unwrap_or(TicketPriority::Medium);
+        let tickets = match params.status {
+            Some(status) => {
+                sqlx::query_as::<_, Ticket>(
+                    r#"
+                    SELECT id, title, description, status, priority, created_at
+                    FROM tickets
+                    WHERE status = $1
+                    ORDER BY created_at DESC
+                    LIMIT $2 OFFSET $3
+                    "#,
+                )
+                .bind(status)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(db)
+                .await?
+            }
+            None => {
+                sqlx::query_as::<_, Ticket>(
+                    r#"
+                    SELECT id, title, description, status, priority, created_at
+                    FROM tickets
+                    ORDER BY created_at DESC
+                    LIMIT $1 OFFSET $2
+                    "#,
+                )
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(db)
+                .await?
+            }
+        };
 
-        let ticket = sqlx::query_as::<_, Ticket>(
+        Ok(tickets)
+    }
+
+    pub async fn update(
+        db: &PgPool,
+        id: i32,
+        payload: UpdateTicketRequest,
+    ) -> Result<Ticket, Error> {
+        sqlx::query_as::<_, Ticket>(
             r#"
-            UPDATE tickets SET status = $1, priority = $2 WHERE id = $3 RETURNING id, title, description, status, priority, created_at
+            UPDATE tickets
+            SET status = COALESCE($1, status),
+                priority = COALESCE($2, priority)
+            WHERE id = $3
+            RETURNING id, title, description, status, priority, created_at
             "#,
         )
-        .bind(status)
-        .bind(priority)
+        .bind(payload.status)
+        .bind(payload.priority)
         .bind(id)
-        .fetch_one(db)
+        .fetch_optional(db)
+        .await?
+        .ok_or_else(|| Error::NotFound(format!("Ticket {id} not found")))
+    }
+
+    pub async fn stats(db: &PgPool) -> Result<Vec<TicketStat>, Error> {
+        let stats = sqlx::query_as::<_, TicketStat>(
+            r#"
+            SELECT status, COUNT(*)::bigint AS count
+            FROM tickets
+            GROUP BY status
+            ORDER BY status
+            "#,
+        )
+        .fetch_all(db)
         .await?;
-        Ok(ticket)
+        Ok(stats)
     }
 }
