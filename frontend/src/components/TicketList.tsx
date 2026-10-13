@@ -8,9 +8,10 @@ interface ListProps {
   loading: boolean
   error: string | null
   onChanged: () => void
+  onEdit: (ticket: Ticket) => void
 }
 
-export function TicketList({ tickets, loading, error, onChanged }: ListProps) {
+export function TicketList({ tickets, loading, error, onChanged, onEdit }: ListProps) {
   if (error) return <p role="alert">{error}</p>
   if (loading && tickets.length === 0) return <p>Loading…</p>
   if (tickets.length === 0) return <p>No tickets</p>
@@ -23,11 +24,12 @@ export function TicketList({ tickets, loading, error, onChanged }: ListProps) {
           <th>Priority</th>
           <th>Created</th>
           <th>Status</th>
+          <th />
         </tr>
       </thead>
       <tbody style={{ opacity: loading ? 0.6 : 1 }}>
         {tickets.map((ticket) => (
-          <TicketRow key={ticket.id} ticket={ticket} onChanged={onChanged} />
+          <TicketRow key={ticket.id} ticket={ticket} onChanged={onChanged} onEdit={onEdit} />
         ))}
       </tbody>
     </table>
@@ -37,11 +39,12 @@ export function TicketList({ tickets, loading, error, onChanged }: ListProps) {
 interface RowProps {
   ticket: Ticket
   onChanged: () => void
+  onEdit: (ticket: Ticket) => void
 }
 
 const cell = { padding: 8, borderTop: '1px solid var(--border)' }
 
-function TicketRow({ ticket, onChanged }: RowProps) {
+function TicketRow({ ticket, onChanged, onEdit }: RowProps) {
   const update = useMutation(updateTicket)
 
   async function changeStatus(status: TicketStatus) {
@@ -70,6 +73,9 @@ function TicketRow({ ticket, onChanged }: RowProps) {
           ))}
         </select>
         {update.error && <div role="alert">{update.error}</div>}
+      </td>
+      <td style={cell}>
+        <button onClick={() => onEdit(ticket)}>Edit</button>
       </td>
     </tr>
   )

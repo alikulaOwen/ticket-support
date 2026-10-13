@@ -8,7 +8,7 @@ interface Props {
 
 export function TicketFilters({ status, onChange }: Props) {
   return (
-    <label style={{ display: 'block', marginBottom: 16 }}>
+    <label>
       Status:{' '}
       <select value={status} onChange={(e) => onChange(e.target.value as StatusFilter)}>
         <option value="all">All</option>
