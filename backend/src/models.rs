@@ -95,46 +95,35 @@ impl Ticket {
         .ok_or_else(|| Error::NotFound(format!("Ticket {id} not found")))
     }
 
-    pub async fn list(db: &PgPool, params: TicketQueryParams) -> Result<Vec<Ticket>, Error> {
+    pub async fn list(db: &PgPool, params: TicketQueryParams) -> Result<TicketList, Error> {
         let limit = params.limit.unwrap_or(20).clamp(1, 100);
         let page = params.page.unwrap_or(1).max(1);
         let offset = (page - 1) * limit;
-
-        let tickets = match params.status {
-            Some(status) => {
-                sqlx::query_as::<_, Ticket>(
-                    r#"
-                    SELECT id, title, description, status, priority, created_at
-                    FROM tickets
-                    WHERE status = $1
-                    ORDER BY created_at DESC
-                    LIMIT $2 OFFSET $3
-                    "#,
-                )
-                .bind(status)
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(db)
-                .await?
-            }
-            None => {
-                sqlx::query_as::<_, Ticket>(
-                    r#"
-                    SELECT id, title, description, status, priority, created_at
-                    FROM tickets
-                    ORDER BY created_at DESC
-                    LIMIT $1 OFFSET $2
-                    "#,
-                )
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(db)
-                .await?
-            }
-        };
-
-        Ok(tickets)
-    }
+    
+        let items = sqlx::query_as::<_, Ticket>(
+            r#"
+            SELECT id, title, description, status, priority, created_at
+            FROM tickets
+            WHERE ($1::ticket_status IS NULL OR status = $1)
+            ORDER BY created_at DESC, id DESC
+            LIMIT $2 OFFSET $3
+            "#,
+        )
+        .bind(params.status)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(db)
+        .await?;
+    
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM tickets WHERE ($1::ticket_status IS NULL OR status = $1)",
+        )
+        .bind(params.status)
+        .fetch_one(db)
+        .await?;
+    
+        Ok(TicketList { items, total, page, limit })
+    }  
 
     pub async fn update(
         db: &PgPool,
@@ -161,10 +150,11 @@ impl Ticket {
     pub async fn stats(db: &PgPool) -> Result<Vec<TicketStat>, Error> {
         let stats = sqlx::query_as::<_, TicketStat>(
             r#"
-            SELECT status, COUNT(*)::bigint AS count
-            FROM tickets
-            GROUP BY status
-            ORDER BY status
+            SELECT s.status, COUNT(t.id)::bigint AS count
+            FROM unnest(enum_range(NULL::ticket_status)) AS s(status)
+            LEFT JOIN tickets t ON t.status = s.status
+            GROUP BY s.status
+            ORDER BY s.status
             "#,
         )
         .fetch_all(db)
