@@ -68,9 +68,7 @@ function PriorityChip({ priority }: { priority: TicketPriority }) {
 
 function CreatedAt({ value }: { value: string }) {
   const date = new Date(value)
-  const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const [month, rest] = day.split(' ')
-  const label = `${month.toUpperCase()} ${rest}`
+  const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
   return (
