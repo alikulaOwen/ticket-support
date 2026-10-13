@@ -66,6 +66,21 @@ function PriorityChip({ priority }: { priority: TicketPriority }) {
   return <span className={`chip chip-${priority}`}>{PRIORITY_LABELS[priority]}</span>
 }
 
+function CreatedAt({ value }: { value: string }) {
+  const date = new Date(value)
+  const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const [month, rest] = day.split(' ')
+  const label = `${month.toUpperCase()} ${rest}`
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+
+  return (
+    <time dateTime={value} className="created-at">
+      <span className="created-at-date">{label}</span>
+      <span className="created-at-time">{time}</span>
+    </time>
+  )
+}
+
 function TicketRow({ ticket, onChanged, onEdit }: RowProps) {
   const update = useMutation(updateTicket)
 
@@ -83,7 +98,9 @@ function TicketRow({ ticket, onChanged, onEdit }: RowProps) {
       <td>
         <PriorityChip priority={ticket.priority} />
       </td>
-      <td>{new Date(ticket.created_at).toLocaleString()}</td>
+      <td>
+        <CreatedAt value={ticket.created_at} />
+      </td>
       <td>
         <select
           value={ticket.status}

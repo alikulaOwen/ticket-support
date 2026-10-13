@@ -233,6 +233,29 @@ select {
   vertical-align: middle;
 }
 
+.tickets td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.created-at {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-weight: 300;
+  line-height: 1.25;
+}
+
+.created-at-date {
+  color: var(--text);
+  letter-spacing: 0.02rem;
+}
+
+.created-at-time {
+  font-size: 0.8rem;
+  color: var(--text);
+  opacity: 0.7;
+}
+
 .tickets tbody.is-loading {
   opacity: 0.6;
 }
