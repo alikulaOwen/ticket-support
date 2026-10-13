@@ -23,10 +23,10 @@ export function Modal({ open, title, onClose, children }: Props) {
       ref={ref}
       onClose={onClose}
       style={{
-        width: 'min(480px, 90vw)',
-        padding: 24,
-        border: '1px solid var(--border)',
-        borderRadius: 8,
+        width: 'min(30rem, 90vw)',
+        padding: '1.25rem',
+        border: '0.06rem solid var(--border)',
+        borderRadius: '0.5rem',
         background: 'var(--bg)',
         color: 'var(--text)',
         textAlign: 'left',

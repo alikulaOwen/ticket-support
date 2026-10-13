@@ -17,24 +17,35 @@ export function TicketForm({ ticket, onSaved, onCancel }: Props) {
   const [status, setStatus] = useState<TicketStatus>(ticket?.status ?? 'open')
   const [priority, setPriority] = useState<TicketPriority>(ticket?.priority ?? 'medium')
 
-  const save = useMutation(() =>
-    ticket
-      ? updateTicket(ticket.id, { status, priority })
-      : createTicket({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          priority,
-        }),
+  const save = useMutation(
+    (fields: {
+      title: string
+      description?: string
+      status: TicketStatus
+      priority: TicketPriority
+    }) =>
+      ticket
+        ? updateTicket(ticket.id, { status: fields.status, priority: fields.priority })
+        : createTicket({
+            title: fields.title,
+            description: fields.description,
+            priority: fields.priority,
+          }),
   )
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    const saved = await save.run()
+    const saved = await save.run({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      status,
+      priority,
+    })
     if (saved) onSaved()
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 8 }}>
+    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.5rem' }}>
       {ticket ? (
         <div>
           <strong style={{ color: 'var(--text-h)' }}>{ticket.title}</strong>
@@ -84,11 +95,11 @@ export function TicketForm({ ticket, onSaved, onCancel }: Props) {
 
       {save.error && <p role="alert">{save.error}</p>}
 
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
         <button type="button" onClick={onCancel} disabled={save.pending}>
           Cancel
         </button>
-        <button type="submit" disabled={save.pending}>
+        <button className="primary" type="submit" disabled={save.pending}>
           {save.pending ? 'Saving…' : ticket ? 'Save changes' : 'Create ticket'}
         </button>
       </div>

@@ -1,5 +1,5 @@
 import { updateTicket } from '../api/client'
-import type { Ticket, TicketStatus } from '../api/types'
+import type { Ticket, TicketPriority, TicketStatus } from '../api/types'
 import { useMutation } from '../hooks/useMutation'
 import { PRIORITY_LABELS, STATUSES, STATUS_LABELS } from './labels'
 
@@ -12,27 +12,47 @@ interface ListProps {
 }
 
 export function TicketList({ tickets, loading, error, onChanged, onEdit }: ListProps) {
-  if (error) return <p role="alert">{error}</p>
-  if (loading && tickets.length === 0) return <p>Loading…</p>
-  if (tickets.length === 0) return <p>No tickets</p>
+  if (error) {
+    return (
+      <div className="table-scroll">
+        <p className="empty" role="alert">{error}</p>
+      </div>
+    )
+  }
+  if (loading && tickets.length === 0) {
+    return (
+      <div className="table-scroll">
+        <p className="empty">Loading…</p>
+      </div>
+    )
+  }
+  if (tickets.length === 0) {
+    return (
+      <div className="table-scroll">
+        <p className="empty">No tickets</p>
+      </div>
+    )
+  }
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Priority</th>
-          <th>Created</th>
-          <th>Status</th>
-          <th />
-        </tr>
-      </thead>
-      <tbody style={{ opacity: loading ? 0.6 : 1 }}>
-        {tickets.map((ticket) => (
-          <TicketRow key={ticket.id} ticket={ticket} onChanged={onChanged} onEdit={onEdit} />
-        ))}
-      </tbody>
-    </table>
+    <div className="table-scroll">
+      <table className="tickets">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Created</th>
+            <th>Status</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody className={loading ? 'is-loading' : undefined}>
+          {tickets.map((ticket) => (
+            <TicketRow key={ticket.id} ticket={ticket} onChanged={onChanged} onEdit={onEdit} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -42,7 +62,9 @@ interface RowProps {
   onEdit: (ticket: Ticket) => void
 }
 
-const cell = { padding: 8, borderTop: '1px solid var(--border)' }
+function PriorityChip({ priority }: { priority: TicketPriority }) {
+  return <span className={`chip chip-${priority}`}>{PRIORITY_LABELS[priority]}</span>
+}
 
 function TicketRow({ ticket, onChanged, onEdit }: RowProps) {
   const update = useMutation(updateTicket)
@@ -54,13 +76,15 @@ function TicketRow({ ticket, onChanged, onEdit }: RowProps) {
 
   return (
     <tr>
-      <td style={cell}>
+      <td>
         <strong style={{ color: 'var(--text-h)' }}>{ticket.title}</strong>
         {ticket.description && <div>{ticket.description}</div>}
       </td>
-      <td style={cell}>{PRIORITY_LABELS[ticket.priority]}</td>
-      <td style={cell}>{new Date(ticket.created_at).toLocaleString()}</td>
-      <td style={cell}>
+      <td>
+        <PriorityChip priority={ticket.priority} />
+      </td>
+      <td>{new Date(ticket.created_at).toLocaleString()}</td>
+      <td>
         <select
           value={ticket.status}
           disabled={update.pending}
@@ -74,8 +98,10 @@ function TicketRow({ ticket, onChanged, onEdit }: RowProps) {
         </select>
         {update.error && <div role="alert">{update.error}</div>}
       </td>
-      <td style={cell}>
-        <button onClick={() => onEdit(ticket)}>Edit</button>
+      <td>
+        <button type="button" onClick={() => onEdit(ticket)}>
+          Edit
+        </button>
       </td>
     </tr>
   )

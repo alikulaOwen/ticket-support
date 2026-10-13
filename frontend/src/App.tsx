@@ -40,13 +40,19 @@ function App() {
   }
 
   return (
-    <main style={{ padding: '0 24px' }}>
-      <h1>Ticket Support</h1>
-      <StatsBar stats={stats.data} error={stats.error} />
+    <main className="app">
+      <div className="app-header">
+        <div className="app-title">
+          <h1>Ticket Support</h1>
+          <StatsBar stats={stats.data} error={stats.error} />
+        </div>
 
-      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-        <TicketFilters status={status} onChange={changeStatus} />
-        <button onClick={() => setEditing('new')}>New ticket</button>
+        <div className="app-actions">
+          <button className="primary" type="button" onClick={() => setEditing('new')}>
+            New ticket
+          </button>
+          <TicketFilters status={status} onChange={changeStatus} />
+        </div>
       </div>
 
       <TicketList
