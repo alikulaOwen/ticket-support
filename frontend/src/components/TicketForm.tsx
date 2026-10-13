@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { SubmitEvent } from 'react'
 import { createTicket } from '../api/client'
 import type { TicketPriority } from '../api/types'
 import { useMutation } from '../hooks/useMutation'
@@ -15,7 +15,7 @@ export function TicketForm({ onCreated }: Props) {
   const [priority, setPriority] = useState<TicketPriority>('medium')
   const create = useMutation(createTicket)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const ticket = await create.run({
       title: title.trim(),
