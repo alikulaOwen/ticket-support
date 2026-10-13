@@ -1,5 +1,10 @@
+import { useState } from 'react'
+import { useTickets } from './hooks/useTickets'
+import { useStats } from './hooks/useStats'
+import type { StatusFilter } from './api/types'
+
 function App() {
-  return <h1>Ticket Support</h1>
+ 
 }
 
 export default App
