@@ -20,12 +20,14 @@ podman compose up -d
 
 Defaults (overridable via a `.env` next to `docker-compose.yml`, see `.env.example`):
 
-| Variable | Default |
-|---|---|
-| `POSTGRES_USER` | `ticket` |
-| `POSTGRES_PASSWORD` | `ticket` |
-| `POSTGRES_DB` | `ticket_support` |
-| port | `5432` |
+
+| Variable            | Default          |
+| ------------------- | ---------------- |
+| `POSTGRES_USER`     | `ticket`         |
+| `POSTGRES_PASSWORD` | `ticket`         |
+| `POSTGRES_DB`       | `ticket_support` |
+| port                | `5432`           |
+
 
 If you use Docker instead of Podman, `docker compose up -d` is the same file.
 
@@ -40,13 +42,14 @@ cargo run
 
 The API listens on `http://localhost:3000`. Schema is applied on startup (`sqlx::migrate!()`).
 
-| Method | Path | Notes |
-|---|---|---|
-| `POST` | `/tickets` | create (title required, status starts as `open`) |
-| `GET` | `/tickets` | list; `?status=`, `?page=`, `?limit=` |
-| `GET` | `/tickets/:id` | one ticket |
-| `PATCH` | `/tickets/:id` | update `status` and/or `priority` |
-| `GET` | `/tickets/stats` | counts grouped by status (zeros included) |
+
+| Method  | Path             | Notes                                            |
+| ------- | ---------------- | ------------------------------------------------ |
+| `POST`  | `/tickets`       | create (title required, status starts as `open`) |
+| `GET`   | `/tickets`       | list; `?status=`, `?page=`, `?limit=`            |
+| `PATCH` | `/tickets/:id`   | update `status` and/or `priority`                |
+| `GET`   | `/tickets/stats` | counts grouped by status (zeros included)        |
+
 
 Enums are snake_case: `open` / `in_progress` / `closed`, `low` / `medium` / `high`.
 
@@ -77,4 +80,7 @@ Postgres must be running for these tests.
 
 ## Decisions & Tradeoffs
 
-I kept the surface area to the brief: one page, the four required endpoints, plus `GET /tickets/:id` because the UI needed a round-trip after create. PATCH only updates status and priority — title and description stay immutable so I did not invent a field the spec did not ask for. The list returns `{ items, total, page, limit }` instead of a bare array so the pager does not have to guess; with more time I would add a stable cursor instead of offset pagination. After create or update the UI refetches list and stats via a `refreshKey` rather than patching local cache, which is simpler and hard to get wrong at this size. CORS allows any origin so Vite on `:5173` can call `:3000` without a proxy; that would be locked down in a real deploy. Tests use `#[sqlx::test]` isolated databases instead of truncating the shared `ticket_support` DB, so `cargo test` can run in parallel. The form is a native `<dialog>` used for both create and edit; I skipped a component library because the brief is not scoring polish. Auth, request logging, and graceful shutdown were left out — I would add tracing and a dedicated test compose service next.
+### This has been scoped to an implementation:
+A single-page interface, the four endpoints. Per the specification, PATCH /tickets/:id mutates only status and priority, deliberately keeping title and description immutable to avoid inventing unrequested behavior. 
+
+The ticket list endpoint returns an envelope ({ items, total, page, limit }) rather than a bare array, providing deterministic metadata for pagination; given more time, I would replace offset pagination with cursor-based keysets to handle large datasets efficiently. On mutations, the React frontend increments a refresh key to trigger clean server re-fetches for the list and stats rather than managing fragile optimistic cache diffs. Permissive CORS was enabled to eliminate local proxy friction between Vite (:5173) and Axum (:3000), which would be restricted to explicit allowed origins in production. For automated verification, integration tests leverage #[sqlx::test] with isolated ephemeral databases rather than truncating shared state, allowing cargo test to execute safely in parallel. The UI utilizes native HTML <dialog> elements and basic styles without heavy component libraries. Production concerns such as authentication, structured tracing (tracing-subscriber), and graceful shutdown signals were what I intentionally deferred.
