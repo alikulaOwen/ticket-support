@@ -1,7 +1,7 @@
 
 Struct AppState{
-    db:PgConnection,
-    
+    db:PgPool,
+
 
 }
 
