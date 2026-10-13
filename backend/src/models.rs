@@ -32,6 +32,14 @@ pub struct Ticket {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct TicketList {
+    pub items: Vec<Ticket>,
+    pub total: i64,
+    pub page: i64,
+    pub limit: i64,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateTicketRequest {
     pub title: String,

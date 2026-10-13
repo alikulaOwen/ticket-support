@@ -21,6 +21,26 @@ impl From<axum::Error> for Error {
     }
 }
 
+use axum::extract::rejection::{JsonRejection, PathRejection, QueryRejection};
+
+impl From<JsonRejection> for Error {
+    fn from(e: JsonRejection) -> Self {
+        Error::BadRequest(e.body_text())
+    }
+}
+
+impl From<QueryRejection> for Error {
+    fn from(e: QueryRejection) -> Self {
+        Error::BadRequest(e.body_text())
+    }
+}
+
+impl From<PathRejection> for Error {
+    fn from(e: PathRejection) -> Self {
+        Error::BadRequest(e.body_text())
+    }
+}
+
 impl Error {
     pub fn status_code(&self) -> StatusCode {
         match self {
@@ -40,3 +60,5 @@ impl IntoResponse for Error {
         (status, body).into_response()
     }
 }
+
+
